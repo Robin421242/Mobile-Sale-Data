@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Sales Data</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+        h2 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .edit-btn {
+            background-color: #ffc107;
+            color: black;
+            cursor: pointer;
+        }
+        .edit-btn:hover {
+            background-color: #e0a800;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Mobile Sales Data</h2>
+        <form id="sales-form">
+            <input type="text" id="brand" placeholder="Brand" required>
+            <input type="text" id="model" placeholder="Model" required>
+            <input type="number" id="units" placeholder="Units Sold" required>
+            <input type="number" id="price" placeholder="Price" required>
+            <button type="submit">Add Sale</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Brand</th>
+                    <th>Model</th>
+                    <th>Units Sold</th>
+                    <th>Price</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="sales-table-body">
+            </tbody>
+        </table>
+        <button id="export-btn">Export to Excel</button>
+        <h2>Mostly Sold Mobile Graph</h2>
+        <canvas id="salesChart"></canvas>
+    </div>
+    
+    <script>
+        let salesData = [];
+
+        document.getElementById('sales-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            let brand = document.getElementById('brand').value;
+            let model = document.getElementById('model').value;
+            let units = parseInt(document.getElementById('units').value);
+            let price = parseFloat(document.getElementById('price').value);
+            
+            let tableBody = document.getElementById('sales-table-body');
+            let newRow = tableBody.insertRow();
+            newRow.innerHTML = `<td>${brand}</td><td>${model}</td><td>${units}</td><td>${price}</td>
+                                <td><button class='edit-btn' onclick='editRow(this)'>Edit</button></td>`;
+            
+            salesData.push({ brand, units });
+            updateChart();
+            document.getElementById('sales-form').reset();
+        });
+
+        function editRow(button) {
+            let row = button.parentElement.parentElement;
+            document.getElementById('brand').value = row.cells[0].textContent;
+            document.getElementById('model').value = row.cells[1].textContent;
+            document.getElementById('units').value = row.cells[2].textContent;
+            document.getElementById('price').value = row.cells[3].textContent;
+            row.remove();
+        }
+
+        document.getElementById('export-btn').addEventListener('click', function() {
+            let table = document.querySelector('table');
+            let workbook = XLSX.utils.table_to_book(table, {sheet: "Sales Data"});
+            XLSX.writeFile(workbook, 'mobile_sales_data.xlsx');
+        });
+
+        function updateChart() {
+            let brandCounts = {};
+            salesData.forEach(({ brand, units }) => {
+                brandCounts[brand] = (brandCounts[brand] || 0) + units;
+            });
+            let labels = Object.keys(brandCounts);
+            let data = Object.values(brandCounts);
+
+            if (window.salesChartInstance) {
+                window.salesChartInstance.destroy();
+            }
+
+            let ctx = document.getElementById('salesChart').getContext('2d');
+            window.salesChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Most Sold Mobile Brands',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
